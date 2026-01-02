@@ -1,9 +1,12 @@
 //details advised as per NAHAM
+using System.ComponentModel.DataAnnotations;
+
 public enum Sex {Male, Female, Unknown}
 public class PatientInfo
 {
     //Meta
-    public int PatientId { get; set; } 
+
+    public int Id { get; set; } 
 
     //Basic info
     public string? LastName {get; set;}

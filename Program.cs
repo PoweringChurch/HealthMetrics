@@ -1,11 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddDbContext<PatientDetailsDb>(options => 
+    options.UseInMemoryDatabase("PatientDetails"));
+
+
 builder.Services.AddOpenApiDocument(config =>
 {
     config.DocumentName = "HealthcareAPI";
@@ -35,41 +41,41 @@ app.UseHttpsRedirection();
 
 var patientDetails = app.MapGroup("/patientDetails");
 
-patientDetails.MapGet("/",GetAllPatientDetails);
-patientDetails.MapGet("/{id}", GetPatientInfo);
+patientDetails.MapGet("",GetAllPatientDetails);
 
-patientDetails.MapPost("/",AddPatientInfo);
 
-patientDetails.MapPut("/",ReplacePatientInfo);
-/*
-patientDetails.MapPatch("/{id}",UpdatePartialPatientInfo);
-*/
-patientDetails.MapDelete("/{id}",RemovePatientInfo);
+var patient = patientDetails.MapGroup("/patient");
+patient.MapGet("/{patientId:int}", GetPatientInfo);
+patient.MapPatch("/{patientId:int}",UpdatePartialPatientInfo);
+patient.MapPost("",AddPatientInfo);
+patient.MapPut("",ReplacePatientInfo);
+patient.MapDelete("/{patientId:int}",RemovePatientInfo);
 
 app.Run();
 
-static async Task<IResult> GetAllPatientDetails(PatientDetailsDb db)
+static async Task<IResult> GetAllPatientDetails([FromServices] PatientDetailsDb db)
 {
     return TypedResults.Ok(await db.PatientDetails.ToArrayAsync());
 }
 
-static async Task<IResult> GetPatientInfo(int patientId, PatientDetailsDb db)
+static async Task<IResult> GetPatientInfo(int patientId, [FromServices] PatientDetailsDb db)
 {
     return await db.PatientDetails.FindAsync(patientId)
         is PatientInfo patientInfo                          //is patient or null?
             ? TypedResults.Ok(patientInfo)                  //if patient
             : TypedResults.NotFound("No patient found");    //if null
 }
-
-static async Task<IResult> AddPatientInfo(PatientInfo info,PatientDetailsDb db)
+static async Task<IResult> AddPatientInfo(PatientInfo info, [FromServices] PatientDetailsDb db)
 {
+    info.Id = db.patientIdNum;
+    db.patientIdNum++;
     db.PatientDetails.Add(info);
     await db.SaveChangesAsync();
 
-    return TypedResults.Created($"/patientDetails/{info.PatientId}", info);
+    return TypedResults.Created($"/patientDetails/{info.Id}", info);
 }
 
-static async Task<IResult> UpdatePartialPatientInfo(int id, JsonPatchDocument<PatientInfo> inputInfo, PatientDetailsDb db)
+static async Task<IResult> UpdatePartialPatientInfo(int id, JsonPatchDocument<PatientInfo> inputInfo, [FromServices] PatientDetailsDb db)
 {
     if (inputInfo is null) return TypedResults.BadRequest();
 
@@ -86,7 +92,7 @@ static async Task<IResult> UpdatePartialPatientInfo(int id, JsonPatchDocument<Pa
     
 }
 
-static async Task<IResult> ReplacePatientInfo(int id, PatientInfo inputInfo, PatientDetailsDb db)
+static async Task<IResult> ReplacePatientInfo(int id, PatientInfo inputInfo, [FromServices] PatientDetailsDb db)
 {
     if (inputInfo is null) return TypedResults.BadRequest();
 
@@ -116,7 +122,7 @@ static async Task<IResult> ReplacePatientInfo(int id, PatientInfo inputInfo, Pat
     return Results.NoContent();
 }
 
-static async Task<IResult> RemovePatientInfo(int patientId, PatientDetailsDb db)
+static async Task<IResult> RemovePatientInfo(int patientId, [FromServices] PatientDetailsDb db)
 {
     if (await db.PatientDetails.FindAsync(patientId) is PatientInfo info) //if we can find patient of id patientId
     {
