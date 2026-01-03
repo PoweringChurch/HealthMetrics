@@ -113,10 +113,6 @@ static async Task<IResult> ReplacePatientInfo(int id, PatientInfo inputInfo, [Fr
     info.PhoneNumber = inputInfo.PhoneNumber;
     info.AdditionalInfo = inputInfo.AdditionalInfo;
 
-    info.VitalsHistory = inputInfo.VitalsHistory;
-    info.MedicationHistory = inputInfo.MedicationHistory;
-    info.DiagnosesHistory = inputInfo.DiagnosesHistory;
-
     await db.SaveChangesAsync();
 
     return Results.NoContent();
