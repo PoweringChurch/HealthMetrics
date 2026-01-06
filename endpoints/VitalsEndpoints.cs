@@ -8,24 +8,24 @@ public static class VitalsEndpoints
     public static void MapEndpoints(this IEndpointRouteBuilder app) 
     {
         var group = app.MapGroup("/vitals");
-        group.MapGet("/fromvitals/{diagnosisId:int}",GetDiagnosisFromId);
-        group.MapGet("/frompatient/{patientId:int}",GetPatientDiagnoses);
-        group.MapPost("/{patientId:int}",AddPatientDiagnosis);
-        group.MapDelete("/{diagnosisId:int}",RemoveDiagnosis);
-        group.MapPatch("/{diagnosisId:int}",UpdatePartialDiagnosis);
+        group.MapGet("/fromvitals/{vitalsId:int}",GetVitalsFromId);
+        group.MapGet("/frompatient/{patientId:int}",GetPatientVitals);
+        group.MapPost("/{patientId:int}",AddPatientVitals);
+        group.MapDelete("/{vitalsId:int}",RemoveDiagnosis);
+        group.MapPatch("/{vitalsId:int}",UpdatePartialVitals);
     }
-    static async Task<IResult> GetDiagnosisFromId(int diagnosisId,
-        [FromServices] DiagnosesDb diagnosesDb)
+    static async Task<IResult> GetVitalsFromId(int vitalsId,
+        [FromServices] VitalsDb vitalsDb)
     {
-        Diagnosis? diagnosis = await diagnosesDb.Diagnoses.FindAsync(diagnosisId);
-        if (diagnosis is null)
+        VitalsEntry? entry = await vitalsDb.VitalsEntries.FindAsync(vitalsId);
+        if (entry is null)
             return TypedResults.NotFound();
-        return TypedResults.Ok(diagnosis);
+        return TypedResults.Ok(entry);
     }
-    static async Task<IResult> GetPatientDiagnoses(int patientId,
+    static async Task<IResult> GetPatientVitals(int patientId,
         [FromServices] PatientInfoDb patientDb,
-        [FromServices] DiagnosesDb diagnosesDb,
-        string? sortBy = "name",
+        [FromServices] VitalsDb vitalsDb,
+        string? sortBy = "date",
         bool ascending = true,
         int page = 1,
         int pageSize = 10)
@@ -33,84 +33,77 @@ public static class VitalsEndpoints
         if (await patientDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
-        IQueryable<Diagnosis> query = diagnosesDb.Diagnoses
+        IQueryable<VitalsEntry> query = vitalsDb.VitalsEntries
             .Where(m => m.PatientId == patientId);
         query = sortBy?.ToLower() switch
         {
-            "date" => ascending ? query.OrderBy(p => p.DiagnosisDate) : query.OrderByDescending(p => p.DiagnosisDate),
-            "name" => ascending ? query.OrderBy(p => p.Name) : query.OrderByDescending(p => p.Name),
-            _ => query.OrderBy(p => p.Name)
+            "date" => ascending ? query.OrderBy(p => p.DateTaken) : query.OrderByDescending(p => p.DateTaken),
+            _ => query.OrderBy(p => p.DateTaken)
         };
 
         var totalCount = await query.CountAsync();
-        var diagnoses = await query
+        var entries = await query
             .Skip((page-1)*pageSize)
             .Take(pageSize)
             .ToListAsync();
 
         return Results.Ok(new 
         { 
-            Data = diagnoses,
+            Data = entries,
             TotalCount = totalCount,
             Page = page,
             PageSize = pageSize
         });
     }
-    static async Task<IResult> AddPatientDiagnosis(int patientId,
-        DiagnosisDTO diagnosisDTO,
+    static async Task<IResult> AddPatientVitals(int patientId,
+        VitalsEntryDTO vitalsDTO,
         [FromServices] PatientInfoDb patientDb,
-        [FromServices] DiagnosesDb diagnosesDb)
+        [FromServices] VitalsDb vitalsDb)
     {
         if (await patientDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
-        if (diagnosisDTO is null) return TypedResults.BadRequest("DiagnosisDTO is null");
-        if (diagnosisDTO.DiagnosisDate is null)
-            return TypedResults.BadRequest("Must provide a diagnosis date");
-        if (diagnosisDTO.DiagnosisDate > DateTime.Now)
+        if (vitalsDTO is null) return TypedResults.BadRequest("DiagnosisDTO is null");
+        if (vitalsDTO.DateTaken is null)
+            return TypedResults.BadRequest("Must provide a date");
+        if (vitalsDTO.DateTaken > DateTime.Now)
             return TypedResults.BadRequest("Diagnosis date cannot be in the future");
-        if (diagnosisDTO.ResolvedDate.HasValue && diagnosisDTO.ResolvedDate > DateTime.Now)
-            return TypedResults.BadRequest("Resolve date cannot be in the future");
 
-        Diagnosis diagnosis = new()
+        VitalsEntry entry = new()
         {
-            Name = diagnosisDTO.Name,
             PatientId = patientId,
-            DiagnosisDate = diagnosisDTO.DiagnosisDate.Value,
-            Status = diagnosisDTO.Status
+            DateTaken = vitalsDTO.DateTaken.Value
         };
-        Helpers.MapParameters(diagnosisDTO,diagnosis);
-        diagnosesDb.Diagnoses.Add(diagnosis);
-        await diagnosesDb.SaveChangesAsync();
-        return TypedResults.Ok(diagnosis);
+        Helpers.MapParameters(vitalsDTO,entry);
+        vitalsDb.VitalsEntries.Add(entry);
+        await vitalsDb.SaveChangesAsync();
+        return TypedResults.Ok(entry);
     }
-    static async Task<IResult> UpdatePartialDiagnosis(int diagnosisId,
-        DiagnosisDTO updates,
-        [FromServices] DiagnosesDb diagnosesDb)
+    static async Task<IResult> UpdatePartialVitals(int vitalsId,
+        VitalsEntryDTO updates,
+        [FromServices] VitalsDb vitalsDb)
     {
         if (updates is null) return TypedResults.BadRequest("PatientInfoDTO is null");
-        if (updates.DiagnosisDate.HasValue && updates.DiagnosisDate.Value > DateTime.Now)
-            return TypedResults.BadRequest("Diagnosis date cannot be in the future");
-    
-        if (updates.ResolvedDate.HasValue && updates.ResolvedDate.Value > DateTime.Now)
-            return TypedResults.BadRequest("Resolve date cannot be in the future");
+        if (updates.DateTaken.HasValue && updates.DateTaken.Value > DateTime.Now)
+            return TypedResults.BadRequest("Taken date cannot be in the future");
 
-        var diagnosis = await diagnosesDb.Diagnoses.FindAsync(diagnosisId);
-        if (diagnosis is null) return TypedResults.NotFound();
+        VitalsEntry? entry = await vitalsDb.VitalsEntries.FindAsync(vitalsId);
+        if (entry is null) return
+            TypedResults.NotFound();
 
-        Helpers.MapParameters(updates,diagnosis);
+        Helpers.MapParameters(updates,entry);
 
-        await diagnosesDb.SaveChangesAsync();
-        return TypedResults.Ok(diagnosis);
+        await vitalsDb.SaveChangesAsync();
+        return TypedResults.Ok(entry);
     }
-    static async Task<IResult> RemoveDiagnosis(int diagnosisId,
-    [FromServices] DiagnosesDb diagnosesDb)
+    static async Task<IResult> RemoveDiagnosis(int vitalsId,
+    [FromServices] VitalsDb vitalsDb)
     {
-        var diagnosis = await diagnosesDb.Diagnoses.FindAsync(diagnosisId);
-        if (diagnosis is null)
+        VitalsEntry? entry = await vitalsDb.VitalsEntries.FindAsync(vitalsId);
+        if (entry is null)
             return TypedResults.NotFound();
-        diagnosesDb.Diagnoses.Remove(diagnosis);
-        await diagnosesDb.SaveChangesAsync();
+        vitalsDb.VitalsEntries.Remove(entry);
+        await vitalsDb.SaveChangesAsync();
         return TypedResults.NoContent();
     }
 }

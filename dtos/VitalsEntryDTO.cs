@@ -1,6 +1,6 @@
 public class VitalsEntryDTO
 {
-    public DateTime DateTaken {get; set;} //vitals as of..
+    public DateTime? DateTaken {get; set;} //vitals as of..
     public string? Location { get; set; }
     public string? RecordedBy { get; set; }
     
