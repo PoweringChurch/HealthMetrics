@@ -2,25 +2,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 namespace HealthMetrics.Endpoints;
 
-//nts you need to make this not just be a copy paste of diagnoses, get to watch bebop lol
 public static class VitalsEndpoints
 {
     public static void MapEndpoints(this IEndpointRouteBuilder app) 
     {
         var group = app.MapGroup("/vitals");
-        group.MapGet("/fromvitals/{vitalsId:int}",GetVitalsFromId);
-        group.MapGet("/frompatient/{patientId:int}",GetPatientVitals);
+        group.MapGet("/{patientId:int}",GetPatientVitals);
         group.MapPost("/{patientId:int}",AddPatientVitals);
-        group.MapDelete("/{vitalsId:int}",RemoveDiagnosis);
+        group.MapDelete("/{vitalsId:int}",RemoveVitalsEntry);
         group.MapPatch("/{vitalsId:int}",UpdatePartialVitals);
-    }
-    static async Task<IResult> GetVitalsFromId(int vitalsId,
-        [FromServices] VitalsDb vitalsDb)
-    {
-        VitalsEntry? entry = await vitalsDb.VitalsEntries.FindAsync(vitalsId);
-        if (entry is null)
-            return TypedResults.NotFound();
-        return TypedResults.Ok(entry);
     }
     static async Task<IResult> GetPatientVitals(int patientId,
         [FromServices] PatientInfoDb patientDb,
@@ -63,17 +53,18 @@ public static class VitalsEndpoints
         if (await patientDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
-        if (vitalsDTO is null) return TypedResults.BadRequest("DiagnosisDTO is null");
+        if (vitalsDTO is null) return TypedResults.BadRequest("VitalsDTO is null");
         if (vitalsDTO.DateTaken is null)
             return TypedResults.BadRequest("Must provide a date");
         if (vitalsDTO.DateTaken > DateTime.Now)
-            return TypedResults.BadRequest("Diagnosis date cannot be in the future");
+            return TypedResults.BadRequest("Date taken date cannot be in the future");
 
         VitalsEntry entry = new()
         {
             PatientId = patientId,
             DateTaken = vitalsDTO.DateTaken.Value
         };
+
         Helpers.MapParameters(vitalsDTO,entry);
         vitalsDb.VitalsEntries.Add(entry);
         await vitalsDb.SaveChangesAsync();
@@ -83,7 +74,7 @@ public static class VitalsEndpoints
         VitalsEntryDTO updates,
         [FromServices] VitalsDb vitalsDb)
     {
-        if (updates is null) return TypedResults.BadRequest("PatientInfoDTO is null");
+        if (updates is null) return TypedResults.BadRequest("VitalsDTO is null");
         if (updates.DateTaken.HasValue && updates.DateTaken.Value > DateTime.Now)
             return TypedResults.BadRequest("Taken date cannot be in the future");
 
@@ -96,7 +87,7 @@ public static class VitalsEndpoints
         await vitalsDb.SaveChangesAsync();
         return TypedResults.Ok(entry);
     }
-    static async Task<IResult> RemoveDiagnosis(int vitalsId,
+    static async Task<IResult> RemoveVitalsEntry(int vitalsId,
     [FromServices] VitalsDb vitalsDb)
     {
         VitalsEntry? entry = await vitalsDb.VitalsEntries.FindAsync(vitalsId);

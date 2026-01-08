@@ -7,18 +7,10 @@ public static class MedicationEndpoints
     public static void MapEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/medication");
-        group.MapGet("/frommed/{medicationId:int}",GetMedicationFromId);
-        group.MapGet("/frompatient/{patientId:int}",GetPatientMedications);
+        group.MapGet("/{patientId:int}",GetPatientMedications);
         group.MapPost("/{patientId:int}",AddPatientMedication);
         group.MapDelete("/{medicationId:int}",RemoveMedication);
-    }
-    static async Task<IResult> GetMedicationFromId(int medicationId,
-        [FromServices] MedicationDb medicationDb)
-    {
-        Medication? med = await medicationDb.Medications.FindAsync(medicationId);
-        if (med is null)
-            return TypedResults.NotFound();
-        return TypedResults.Ok(med);
+        group.MapPatch("/{medicationId:int}",UpdatePartialVitals);
     }
     static async Task<IResult> GetPatientMedications(int patientId,
         [FromServices] PatientInfoDb patientDb,
@@ -27,7 +19,13 @@ public static class MedicationEndpoints
         bool ascending = true,
         int page = 1,
         int pageSize = 10)
+    
     {
+        if (pageSize > 25 || pageSize <= 0)
+            return TypedResults.BadRequest("Page size must be 1-25");
+        if (page <= 0)
+            return TypedResults.BadRequest("Page must be >= 1");
+        
         if (await patientDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
@@ -53,6 +51,24 @@ public static class MedicationEndpoints
             Page = page,
             PageSize = pageSize
         });
+    }
+    static async Task<IResult> UpdatePartialMedication(int medicationId, MedicationDTO updates, [FromServices] MedicationDb medicationDb)
+    {
+        if (updates is null) return TypedResults.BadRequest("PatientInfoDTO is null");
+        if (updates.StartDate.HasValue && updates.StartDate.Value > DateTime.Now)
+            return TypedResults.BadRequest("Start date cannot be in the future");
+        if (updates.EndDate.HasValue && updates.EndDate.Value > DateTime.Now)
+            return TypedResults.BadRequest("End date cannot be in the future");
+        if 
+
+        var medication = await medicationDb.Medications.FindAsync(medicationId);
+        if (medication is null) 
+            return TypedResults.NotFound();
+
+        Helpers.MapParameters(updates,medication);
+
+        await medicationDb.SaveChangesAsync();
+        return TypedResults.Ok(medication);
     }
     static async Task<IResult> AddPatientMedication(int patientId,
         MedicationDTO medicationDTO,

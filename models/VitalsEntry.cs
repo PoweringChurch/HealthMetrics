@@ -1,10 +1,11 @@
 public class VitalsEntry
 {
     public int Id { get; set; }
-    public DateTime DateTaken {get; set;} //vitals as of..
+    public int PatientId { get; set; }
+    [Required(ErrorMessage = "Date taken is required")]
+    public DateTime? DateTaken {get; set;} //vitals as of..
     public string? Location { get; set; }
     public string? RecordedBy { get; set; }
-    public int PatientId { get; set; }
     
     //info
     public float? SystolicBloodPressure {get; set;}
@@ -14,7 +15,7 @@ public class VitalsEntry
 
     public float? Temperature {get; set;} //celcius
     public float? RestingRespirationRate {get; set;} //breaths per minute
-
+    
     public float? Height {get; set;} //cm
     public float? Weight {get; set;} //kg
 }

@@ -7,7 +7,7 @@ public static class PatientEndpoints
     {
         var group = app.MapGroup("/patients");
 
-        group.MapGet("/getAll",GetAllPatients);
+        group.MapGet("/",GetAllPatients);
         group.MapGet("/{patientId:int}", GetPatientById);
         group.MapPatch("/{patientId:int}",UpdatePartialPatient); 
         group.MapPost("",CreatePatient);

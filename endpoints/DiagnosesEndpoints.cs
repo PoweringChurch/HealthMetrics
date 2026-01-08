@@ -7,19 +7,10 @@ public static class DiagnosesEndpoints
     public static void MapEndpoints(this IEndpointRouteBuilder app) 
     {
         var group = app.MapGroup("/diagnosis");
-        group.MapGet("/fromdiagnosis/{diagnosisId:int}",GetDiagnosisFromId);
-        group.MapGet("/frompatient/{patientId:int}",GetPatientDiagnoses);
+        group.MapGet("/{patientId:int}",GetPatientDiagnoses);
         group.MapPost("/{patientId:int}",AddPatientDiagnosis);
         group.MapDelete("/{diagnosisId:int}",RemoveDiagnosis);
         group.MapPatch("/{diagnosisId:int}",UpdatePartialDiagnosis);
-    }
-    static async Task<IResult> GetDiagnosisFromId(int diagnosisId,
-        [FromServices] DiagnosesDb diagnosesDb)
-    {
-        Diagnosis? diagnosis = await diagnosesDb.Diagnoses.FindAsync(diagnosisId);
-        if (diagnosis is null)
-            return TypedResults.NotFound();
-        return TypedResults.Ok(diagnosis);
     }
     static async Task<IResult> GetPatientDiagnoses(int patientId,
         [FromServices] PatientInfoDb patientDb,

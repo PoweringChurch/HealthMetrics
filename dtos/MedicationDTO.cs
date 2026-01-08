@@ -5,11 +5,11 @@ public class MedicationDTO
     public string? RecordedBy { get; set; }
 
     //info
-    public required string Name { get; set; }
-    public required string Dosage { get; set; }
-    public required string Frequency { get; set; }
+    public string? Name { get; set; }
+    public string? Dosage { get; set; }
+    public string? Frequency { get; set; }
 
-    public required DateTime StartDate { get; set; }
+    public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; } // null = still active
     public string? Notes { get; set; }
 }
