@@ -13,18 +13,17 @@ public static class VitalsEndpoints
         group.MapPatch("/{vitalsId:int}",UpdatePartialVitals);
     }
     static async Task<IResult> GetPatientVitals(int patientId,
-        [FromServices] PatientInfoDb patientDb,
-        [FromServices] VitalsDb vitalsDb,
+        [FromServices] HealthMetrics healthMetricsDb,
         string? sortBy = "date",
         bool ascending = true,
         int page = 1,
         int pageSize = 10)
     {
-        if (await patientDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
-        IQueryable<VitalsEntry> query = vitalsDb.VitalsEntries
-            .Where(m => m.PatientId == patientId);
+        IQueryable<VitalsEntry> query = healthMetricsDb.VitalsEntries
+            .Where(v => v.PatientId == patientId);
         query = sortBy?.ToLower() switch
         {
             "date" => ascending ? query.OrderBy(p => p.DateTaken) : query.OrderByDescending(p => p.DateTaken),
@@ -47,10 +46,9 @@ public static class VitalsEndpoints
     }
     static async Task<IResult> AddPatientVitals(int patientId,
         VitalsEntryDTO vitalsDTO,
-        [FromServices] PatientInfoDb patientDb,
-        [FromServices] VitalsDb vitalsDb)
+        [FromServices] HealthMetrics healthMetricsDb)
     {
-        if (await patientDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         if (vitalsDTO is null) return TypedResults.BadRequest("VitalsDTO is null");
@@ -66,35 +64,37 @@ public static class VitalsEndpoints
         };
 
         Helpers.MapParameters(vitalsDTO,entry);
-        vitalsDb.VitalsEntries.Add(entry);
-        await vitalsDb.SaveChangesAsync();
+        healthMetricsDb.VitalsEntries.Add(entry);
+        await healthMetricsDb.SaveChangesAsync();
         return TypedResults.Ok(entry);
     }
     static async Task<IResult> UpdatePartialVitals(int vitalsId,
         VitalsEntryDTO updates,
-        [FromServices] VitalsDb vitalsDb)
+        [FromServices] HealthMetricsDb healthMetricsDb)
     {
         if (updates is null) return TypedResults.BadRequest("VitalsDTO is null");
         if (updates.DateTaken.HasValue && updates.DateTaken.Value > DateTime.Now)
             return TypedResults.BadRequest("Taken date cannot be in the future");
 
-        VitalsEntry? entry = await vitalsDb.VitalsEntries.FindAsync(vitalsId);
+        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.FindAsync(vitalsId);
         if (entry is null) return
             TypedResults.NotFound();
 
         Helpers.MapParameters(updates,entry);
 
-        await vitalsDb.SaveChangesAsync();
+        await healthMetricsDb.SaveChangesAsync();
         return TypedResults.Ok(entry);
     }
     static async Task<IResult> RemoveVitalsEntry(int vitalsId,
-    [FromServices] VitalsDb vitalsDb)
+    [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        VitalsEntry? entry = await vitalsDb.VitalsEntries.FindAsync(vitalsId);
+        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.FindAsync(vitalsId);
         if (entry is null)
             return TypedResults.NotFound();
-        vitalsDb.VitalsEntries.Remove(entry);
-        await vitalsDb.SaveChangesAsync();
+        
+        entry.DeletedAt = DateTime.UtcNow;
+
+        await healthMetricsDb.SaveChangesAsync();
         return TypedResults.NoContent();
     }
 }

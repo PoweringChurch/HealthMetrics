@@ -18,4 +18,7 @@ public class Diagnosis
     [Required(ErrorMessage = "Diagnosis status is required")]
     public DiagnosisStatus Status {get; set;} // active, resolved
     public string? Notes { get; set; }
+
+    public DateTime? DeletedAt { get; set; }
+    public bool IsDeleted => DeletedAt.HasValue;
 }

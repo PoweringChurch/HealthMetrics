@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 namespace HealthMetrics.Endpoints;
@@ -13,8 +14,7 @@ public static class MedicationEndpoints
         group.MapPatch("/{medicationId:int}",UpdatePartialVitals);
     }
     static async Task<IResult> GetPatientMedications(int patientId,
-        [FromServices] PatientInfoDb patientDb,
-        [FromServices] MedicationDb medicationDb,
+        [FromServices] HealthMetricsDb healthMetricsDb,
         string? sortBy = "name",
         bool ascending = true,
         int page = 1,
@@ -26,10 +26,10 @@ public static class MedicationEndpoints
         if (page <= 0)
             return TypedResults.BadRequest("Page must be >= 1");
         
-        if (await patientDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
-        IQueryable<Medication> query = medicationDb.Medications
+        IQueryable<Medication> query = healthMetricsDb.Medications
             .Where(m => m.PatientId == patientId);
         query = sortBy?.ToLower() switch
         {
@@ -52,7 +52,7 @@ public static class MedicationEndpoints
             PageSize = pageSize
         });
     }
-    static async Task<IResult> UpdatePartialMedication(int medicationId, MedicationDTO updates, [FromServices] MedicationDb medicationDb)
+    static async Task<IResult> UpdatePartialMedication(int medicationId, MedicationDTO updates, [FromServices] HealthMetricsDb healthMetricsDb)
     {
         if (updates is null) return TypedResults.BadRequest("PatientInfoDTO is null");
         if (updates.StartDate.HasValue && updates.StartDate.Value > DateTime.Now)
@@ -61,21 +61,20 @@ public static class MedicationEndpoints
             return TypedResults.BadRequest("End date cannot be in the future");
         if 
 
-        var medication = await medicationDb.Medications.FindAsync(medicationId);
+        var medication = await healthMetricsDb.Medications.FindAsync(medicationId);
         if (medication is null) 
             return TypedResults.NotFound();
 
         Helpers.MapParameters(updates,medication);
 
-        await medicationDb.SaveChangesAsync();
+        await healthMetricsDb.SaveChangesAsync();
         return TypedResults.Ok(medication);
     }
     static async Task<IResult> AddPatientMedication(int patientId,
         MedicationDTO medicationDTO,
-        [FromServices] PatientInfoDb patientDb,
-        [FromServices] MedicationDb medicationDb)
+        [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        if (await patientDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         if (medicationDTO is null) return TypedResults.BadRequest("MedicationDTO is null");
@@ -93,18 +92,20 @@ public static class MedicationEndpoints
             PatientId = patientId
         };
         Helpers.MapParameters(medicationDTO,medication);
-        medicationDb.Medications.Add(medication);
-        await medicationDb.SaveChangesAsync();
+        healthMetricsDb.Medications.Add(medication);
+        await healthMetricsDb.SaveChangesAsync();
         return TypedResults.Ok(medication);
     }
     static async Task<IResult> RemoveMedication(int medicationId,
-    [FromServices] MedicationDb medicationDb)
+    [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        var medication = await medicationDb.Medications.FindAsync(medicationId);
+        var medication = await healthMetricsDb.Medications.FindAsync(medicationId);
         if (medication is null)
             return TypedResults.NotFound();
-        medicationDb.Medications.Remove(medication);
-        await medicationDb.SaveChangesAsync();
+        
+        medication.DeletedAt = DateTime.UtcNow;
+
+        await healthMetricsDb.SaveChangesAsync();
         return TypedResults.NoContent();
     }
 }

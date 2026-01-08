@@ -18,4 +18,7 @@ public class Medication
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; } // null = still active
     public string? Notes { get; set; }
+
+    public DateTime? DeletedAt { get; set; }
+    public bool IsDeleted => DeletedAt.HasValue;
 }

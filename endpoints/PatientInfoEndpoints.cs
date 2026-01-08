@@ -10,17 +10,17 @@ public static class PatientEndpoints
         group.MapGet("/",GetAllPatients);
         group.MapGet("/{patientId:int}", GetPatientById);
         group.MapPatch("/{patientId:int}",UpdatePartialPatient); 
-        group.MapPost("",CreatePatient);
+        group.MapPost("",AddPatient);
         group.MapDelete("/{patientId:int}",RemovePatient);
     }
     private static async Task<IResult> GetAllPatients(
-        PatientInfoDb db,
+        HealthMetricsDb healthMetricsDb,
         string? sortBy = "name",
         bool ascending = true,
         int page = 1,
         int pageSize = 10)
     {
-        IQueryable<PatientInfo> query = db.PatientInfos;
+        IQueryable<PatientInfo> query = healthMetricsDb.PatientInfos;
 
         query = sortBy?.ToLower() switch
         {
@@ -43,29 +43,28 @@ public static class PatientEndpoints
             PageSize = pageSize
         });
     }
-    static async Task<IResult> GetPatientById(int patientId, [FromServices] PatientInfoDb db)
+    static async Task<IResult> GetPatientById(int patientId, [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        return await db.PatientInfos.FindAsync(patientId)
+        return await healthMetricsDb.PatientInfos.FindAsync(patientId)
             is PatientInfo patientInfo                          //is patient or null?
                 ? TypedResults.Ok(patientInfo)                  //if patient
-                : TypedResults.NotFound("No patient found");    //if null
+                : TypedResults.NotFound();    //if null
     }
-    static async Task<IResult> CreatePatient(PatientInfoDTO infoDTO, [FromServices] PatientInfoDb db)
+    static async Task<IResult> AddPatient(PatientInfoDTO infoDTO, [FromServices] HealthMetricsDb healthMetricsDb)
     {
         if (infoDTO.DOB.HasValue && infoDTO.DOB.Value > DateTime.Now)
-        return TypedResults.BadRequest("Date of birth cannot be in the future");
-    
+            return TypedResults.BadRequest("Date of birth cannot be in the future");
         if (infoDTO.DOB.HasValue && infoDTO.DOB.Value < new DateTime(1850, 1, 1))
             return TypedResults.BadRequest("Date of birth seems unrealistic");
         
         PatientInfo info = new();
         Helpers.MapParameters(infoDTO,info);
-        db.PatientInfos.Add(info);
-        await db.SaveChangesAsync();
+        healthMetricsDb.PatientInfos.Add(info);
+        await healthMetricsDb.SaveChangesAsync();
 
-        return TypedResults.Created($"/patients/{info.Id}", info);
+        return TypedResults.Created(info);
     }
-    static async Task<IResult> UpdatePartialPatient(int patientId, PatientInfoDTO updates, [FromServices] PatientInfoDb db)
+    static async Task<IResult> UpdatePartialPatient(int patientId, PatientInfoDTO updates, [FromServices] HealthMetricsDb healthMetricsDb)
     {
         if (updates is null) return TypedResults.BadRequest("PatientInfoDTO is null");
         if (updates.DOB.HasValue && updates.DOB.Value > DateTime.Now)
@@ -73,23 +72,25 @@ public static class PatientEndpoints
     
         if (updates.DOB.HasValue && updates.DOB.Value < new DateTime(1850, 1, 1))
             return TypedResults.BadRequest("Date of birth seems unrealistic");
-        
 
-        var info = await db.PatientInfos.FindAsync(patientId);
+        var info = await healthMetricsDb.PatientInfos.FindAsync(patientId);
         if (info is null) return TypedResults.NotFound();
 
         Helpers.MapParameters(updates,info);
 
-        await db.SaveChangesAsync();
+        await healthMetricsDb.SaveChangesAsync();
         return TypedResults.Ok(info);
     }
-    static async Task<IResult> RemovePatient(int patientId, [FromServices] PatientInfoDb db)
+    static async Task<IResult> RemovePatient(int patientId, 
+        [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        var info = await db.PatientInfos.FindAsync(patientId);
+        var info = await healthMetricsDb.PatientInfos.FindAsync(patientId);
         if (info is null)
             return TypedResults.NotFound();
-        db.PatientInfos.Remove(info);
-        await db.SaveChangesAsync();
+        
+        info.DeletedAt = DateTime.UtcNow;
+
+        await healthMetricsDb.SaveChangesAsync();
         return TypedResults.NoContent();
     }
 }

@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 
-class PatientInfoDb : DbContext
+class HealthMetricsDb : DbContext
 {
-    public PatientInfoDb(DbContextOptions<PatientInfoDb> options) : base(options) {}
+    public HealthMetricsDb(DbContextOptions<HealthMetricsDb> options) : base(options) {}
     public DbSet<PatientInfo> PatientInfos {get; set;}
+    public DbSet<Diagnosis> Diagnoses {get; set;}
+    public DbSet<Medication> Medications {get; set;}
+    public DbSet<VitalsEntry> VitalsEntries {get; set;}
 }

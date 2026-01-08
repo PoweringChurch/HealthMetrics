@@ -18,4 +18,7 @@ public class VitalsEntry
     
     public float? Height {get; set;} //cm
     public float? Weight {get; set;} //kg
+
+    public DateTime? DeletedAt { get; set; }
+    public bool IsDeleted => DeletedAt.HasValue;
 }
