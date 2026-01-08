@@ -19,7 +19,7 @@ public static class VitalsEndpoints
         int page = 1,
         int pageSize = 10)
     {
-        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.PatientInfos.AnyAsync(patientId) is null)
             return TypedResults.NotFound();
         
         IQueryable<VitalsEntry> query = healthMetricsDb.VitalsEntries
@@ -48,7 +48,7 @@ public static class VitalsEndpoints
         VitalsEntryDTO vitalsDTO,
         [FromServices] HealthMetrics healthMetricsDb)
     {
-        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.PatientInfos.AnyAsync(patientId) is null)
             return TypedResults.NotFound();
         
         if (vitalsDTO is null) return TypedResults.BadRequest("VitalsDTO is null");
@@ -76,7 +76,7 @@ public static class VitalsEndpoints
         if (updates.DateTaken.HasValue && updates.DateTaken.Value > DateTime.Now)
             return TypedResults.BadRequest("Taken date cannot be in the future");
 
-        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.FindAsync(vitalsId);
+        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.AnyAsync(vitalsId);
         if (entry is null) return
             TypedResults.NotFound();
 
@@ -88,7 +88,7 @@ public static class VitalsEndpoints
     static async Task<IResult> RemoveVitalsEntry(int vitalsId,
     [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.FindAsync(vitalsId);
+        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.AnyAsync(vitalsId);
         if (entry is null)
             return TypedResults.NotFound();
         

@@ -8,9 +8,7 @@ builder.Services.AddEndpointsApiExplorer();
 Console.WriteLine($"Connection String: {builder.Configuration.GetConnectionString("PatientInfoDb")}");
 
 builder.Services.AddDbContext<PatientInfoDb>(options => 
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PatientInfoDb")));
-builder.Services.AddDbContext<MedicationDb>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("MedicationDb")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("HealthMetricsDb")));
     
 builder.Services.AddOpenApiDocument(config =>
 {
