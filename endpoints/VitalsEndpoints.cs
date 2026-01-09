@@ -13,13 +13,13 @@ public static class VitalsEndpoints
         group.MapPatch("/{vitalsId:int}",UpdatePartialVitals);
     }
     static async Task<IResult> GetPatientVitals(int patientId,
-        [FromServices] HealthMetrics healthMetricsDb,
+        [FromServices] HealthMetricsDb healthMetricsDb,
         string? sortBy = "date",
         bool ascending = true,
         int page = 1,
         int pageSize = 10)
     {
-        if (await healthMetricsDb.PatientInfos.AnyAsync(patientId) is null)
+        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         IQueryable<VitalsEntry> query = healthMetricsDb.VitalsEntries
@@ -46,9 +46,9 @@ public static class VitalsEndpoints
     }
     static async Task<IResult> AddPatientVitals(int patientId,
         VitalsEntryDTO vitalsDTO,
-        [FromServices] HealthMetrics healthMetricsDb)
+        [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        if (await healthMetricsDb.PatientInfos.AnyAsync(patientId) is null)
+        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         if (vitalsDTO is null) return TypedResults.BadRequest("VitalsDTO is null");
@@ -76,7 +76,7 @@ public static class VitalsEndpoints
         if (updates.DateTaken.HasValue && updates.DateTaken.Value > DateTime.Now)
             return TypedResults.BadRequest("Taken date cannot be in the future");
 
-        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.AnyAsync(vitalsId);
+        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.FindAsync(vitalsId);
         if (entry is null) return
             TypedResults.NotFound();
 
@@ -88,7 +88,7 @@ public static class VitalsEndpoints
     static async Task<IResult> RemoveVitalsEntry(int vitalsId,
     [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.AnyAsync(vitalsId);
+        VitalsEntry? entry = await healthMetricsDb.VitalsEntries.FindAsync(vitalsId);
         if (entry is null)
             return TypedResults.NotFound();
         

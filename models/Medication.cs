@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 public class Medication
 {
     //entry meta
