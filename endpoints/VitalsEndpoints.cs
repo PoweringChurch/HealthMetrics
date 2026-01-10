@@ -19,7 +19,7 @@ public static class VitalsEndpoints
         int page = 1,
         int pageSize = 10)
     {
-        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.Patients.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         IQueryable<VitalsEntry> query = healthMetricsDb.VitalsEntries
@@ -48,7 +48,7 @@ public static class VitalsEndpoints
         VitalsEntryDTO vitalsDTO,
         [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.Patients.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         if (vitalsDTO is null) return TypedResults.BadRequest("VitalsDTO is null");

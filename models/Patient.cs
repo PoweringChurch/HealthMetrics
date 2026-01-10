@@ -1,11 +1,10 @@
 //details advised as per NAHAM
-using System;
 using System.ComponentModel.DataAnnotations;
 
 public enum Sex {Male, Female, Unknown}
 
 //todo: change PatientInfo to Patient and change variable names accordingly.
-public class PatientInfo
+public class Patient
 {
     //Meta
     public int Id { get; set; } 

@@ -3571,11 +3571,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Git\\APIs\\HealthMetrics\\HealthMetrics.csproj",
+      "projectUniqueName": "D:\\Git\\APIs\\HealthMetrics\\HealthMetrics.csproj",
       "projectName": "HealthMetrics",
-      "projectPath": "C:\\Git\\APIs\\HealthMetrics\\HealthMetrics.csproj",
+      "projectPath": "D:\\Git\\APIs\\HealthMetrics\\HealthMetrics.csproj",
       "packagesPath": "C:\\Users\\Xavier\\.nuget\\packages\\",
-      "outputPath": "C:\\Git\\APIs\\HealthMetrics\\obj\\",
+      "outputPath": "D:\\Git\\APIs\\HealthMetrics\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Xavier\\AppData\\Roaming\\NuGet\\NuGet.Config"

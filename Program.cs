@@ -5,9 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
-Console.WriteLine($"Connection String: {builder.Configuration.GetConnectionString("PatientInfoDb")}");
-
-builder.Services.AddDbContext<PatientInfoDb>(options => 
+builder.Services.AddDbContext<HealthMetricsDb>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("HealthMetricsDb")));
     
 builder.Services.AddOpenApiDocument(config =>
@@ -39,5 +37,7 @@ app.UseHttpsRedirection();
 
 PatientEndpoints.MapEndpoints(app);
 MedicationEndpoints.MapEndpoints(app);
+DiagnosesEndpoints.MapEndpoints(app);
+VitalsEndpoints.MapEndpoints(app);
 
 app.Run();

@@ -19,7 +19,7 @@ public static class DiagnosesEndpoints
         int page = 1,
         int pageSize = 10)
     {
-        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.Patients.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         IQueryable<Diagnosis> query = healthMetricsDb.Diagnoses
@@ -49,7 +49,7 @@ public static class DiagnosesEndpoints
         DiagnosisDTO diagnosisDTO,
         [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.Patients.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         if (diagnosisDTO is null) return TypedResults.BadRequest("DiagnosisDTO is null");
@@ -75,7 +75,7 @@ public static class DiagnosesEndpoints
         DiagnosisDTO updates,
         [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        if (updates is null) return TypedResults.BadRequest("PatientInfoDTO is null");
+        if (updates is null) return TypedResults.BadRequest("DiagnosesDTO is null");
         if (updates.DiagnosisDate.HasValue && updates.DiagnosisDate.Value > DateTime.Now)
             return TypedResults.BadRequest("Diagnosis date cannot be in the future");
     

@@ -1,7 +1,7 @@
 //details advised as per NAHAM
 using System.ComponentModel.DataAnnotations;
 
-public class PatientInfoDTO
+public class PatientDTO
 {
     //Basic info
     public string? LastName {get; set;}

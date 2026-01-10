@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 namespace HealthMetrics.Endpoints;
@@ -11,7 +10,7 @@ public static class MedicationEndpoints
         group.MapGet("/{patientId:int}",GetPatientMedications);
         group.MapPost("/{patientId:int}",AddPatientMedication);
         group.MapDelete("/{medicationId:int}",RemoveMedication);
-        group.MapPatch("/{medicationId:int}",UpdatePartialVitals);
+        group.MapPatch("/{medicationId:int}",UpdatePartialMedication);
     }
     static async Task<IResult> GetPatientMedications(int patientId,
         [FromServices] HealthMetricsDb healthMetricsDb,
@@ -26,7 +25,7 @@ public static class MedicationEndpoints
         if (page <= 0)
             return TypedResults.BadRequest("Page must be >= 1");
         
-        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.Patients.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         IQueryable<Medication> query = healthMetricsDb.Medications
@@ -54,12 +53,11 @@ public static class MedicationEndpoints
     }
     static async Task<IResult> UpdatePartialMedication(int medicationId, MedicationDTO updates, [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        if (updates is null) return TypedResults.BadRequest("PatientInfoDTO is null");
+        if (updates is null) return TypedResults.BadRequest("MedicationDTO is null");
         if (updates.StartDate.HasValue && updates.StartDate.Value > DateTime.Now)
             return TypedResults.BadRequest("Start date cannot be in the future");
         if (updates.EndDate.HasValue && updates.EndDate.Value > DateTime.Now)
             return TypedResults.BadRequest("End date cannot be in the future");
-        if 
 
         var medication = await healthMetricsDb.Medications.FindAsync(medicationId);
         if (medication is null) 
@@ -74,7 +72,7 @@ public static class MedicationEndpoints
         MedicationDTO medicationDTO,
         [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        if (await healthMetricsDb.PatientInfos.FindAsync(patientId) is null)
+        if (await healthMetricsDb.Patients.FindAsync(patientId) is null)
             return TypedResults.NotFound();
         
         if (medicationDTO is null) return TypedResults.BadRequest("MedicationDTO is null");
