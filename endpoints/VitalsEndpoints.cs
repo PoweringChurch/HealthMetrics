@@ -12,6 +12,14 @@ public static class VitalsEndpoints
         group.MapDelete("/{vitalsId:int}",RemoveVitalsEntry);
         group.MapPatch("/{vitalsId:int}",UpdatePartialVitals);
     }
+    static ValidationError? ValidateVitals(VitalsEntryDTO vitalsDTO)
+    {
+        if (vitalsDTO.DateTaken is null)
+            return new ValidationError("Must provide a date taken", "Date");
+        if (vitalsDTO.DateTaken > DateTime.Now)
+            return new ValidationError("Date taken cannot be in the future", "Date");
+        return null;
+    }
     static async Task<IResult> GetPatientVitals(int patientId,
         [FromServices] HealthMetricsDb healthMetricsDb,
         string? sortBy = "date",
@@ -19,17 +27,24 @@ public static class VitalsEndpoints
         int page = 1,
         int pageSize = 10)
     {
+        //limit pages
+        if (pageSize > 25 || pageSize <= 0)
+            return TypedResults.BadRequest("Page size must be 1-25");
+        if (page <= 0)
+            return TypedResults.BadRequest("Page must be >= 1");
+        //check if patient exists
         if (await healthMetricsDb.Patients.FindAsync(patientId) is null)
             return TypedResults.NotFound();
-        
+        //get associated
         IQueryable<VitalsEntry> query = healthMetricsDb.VitalsEntries
             .Where(v => v.PatientId == patientId);
+        //sort
         query = sortBy?.ToLower() switch
         {
             "date" => ascending ? query.OrderBy(p => p.DateTaken) : query.OrderByDescending(p => p.DateTaken),
             _ => query.OrderBy(p => p.DateTaken)
         };
-
+        //paginate
         var totalCount = await query.CountAsync();
         var entries = await query
             .Skip((page-1)*pageSize)
@@ -45,41 +60,46 @@ public static class VitalsEndpoints
         });
     }
     static async Task<IResult> AddPatientVitals(int patientId,
-        VitalsEntryDTO vitalsDTO,
+        List<VitalsEntryDTO> vitalsDTOs,
         [FromServices] HealthMetricsDb healthMetricsDb)
     {
+        //limit dtos sent
+        if (vitalsDTOs.Count <= 0) return TypedResults.BadRequest("Must provide at least one DTO");
+        if (vitalsDTOs.Count > 100) return TypedResults.BadRequest("Only provide up to 10 DTOs at once");
+        //check if patient exists
         if (await healthMetricsDb.Patients.FindAsync(patientId) is null)
             return TypedResults.NotFound();
-        
-        if (vitalsDTO is null) return TypedResults.BadRequest("VitalsDTO is null");
-        if (vitalsDTO.DateTaken is null)
-            return TypedResults.BadRequest("Must provide a date");
-        if (vitalsDTO.DateTaken > DateTime.Now)
-            return TypedResults.BadRequest("Date taken date cannot be in the future");
-
-        VitalsEntry entry = new()
+        //loop through dtos sent
+        foreach (VitalsEntryDTO vitalsDTO in vitalsDTOs)
         {
-            PatientId = patientId,
-            DateTaken = vitalsDTO.DateTaken.Value
-        };
-
-        Helpers.MapParameters(vitalsDTO,entry);
-        healthMetricsDb.VitalsEntries.Add(entry);
+            //validate
+            if (ValidateVitals(vitalsDTO) is ValidationError err)
+                return TypedResults.BadRequest(new {message = err.Message, field = err.Field});
+            //create
+            VitalsEntry entry = new()
+            {
+                PatientId = patientId,
+                DateTaken = vitalsDTO.DateTaken
+            };
+            Helpers.MapParameters(vitalsDTO,entry);
+            healthMetricsDb.VitalsEntries.Add(entry);
+        }
+        
         await healthMetricsDb.SaveChangesAsync();
-        return TypedResults.Ok(entry);
+        return TypedResults.Ok();
     }
     static async Task<IResult> UpdatePartialVitals(int vitalsId,
         VitalsEntryDTO updates,
         [FromServices] HealthMetricsDb healthMetricsDb)
     {
-        if (updates is null) return TypedResults.BadRequest("VitalsDTO is null");
-        if (updates.DateTaken.HasValue && updates.DateTaken.Value > DateTime.Now)
-            return TypedResults.BadRequest("Taken date cannot be in the future");
-
+        //validate
+        if (ValidateVitals(updates) is ValidationError err)
+            return TypedResults.BadRequest(new {message = err.Message, field = err.Field});
+        //check if entry exists
         VitalsEntry? entry = await healthMetricsDb.VitalsEntries.FindAsync(vitalsId);
         if (entry is null) return
             TypedResults.NotFound();
-
+        //update
         Helpers.MapParameters(updates,entry);
 
         await healthMetricsDb.SaveChangesAsync();
@@ -88,10 +108,11 @@ public static class VitalsEndpoints
     static async Task<IResult> RemoveVitalsEntry(int vitalsId,
     [FromServices] HealthMetricsDb healthMetricsDb)
     {
+        //check if entry exists
         VitalsEntry? entry = await healthMetricsDb.VitalsEntries.FindAsync(vitalsId);
         if (entry is null)
             return TypedResults.NotFound();
-        
+        //mark as deleted
         entry.DeletedAt = DateTime.UtcNow;
 
         await healthMetricsDb.SaveChangesAsync();

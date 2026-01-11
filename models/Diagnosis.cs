@@ -13,7 +13,7 @@ public class Diagnosis
     [Required(ErrorMessage = "Diagnosis name is required")]
     public string? Name { get; set; }
     [Required(ErrorMessage = "Diagnosis date is required")]
-    public DateTime DiagnosisDate { get; set; }
+    public DateTime? DiagnosisDate { get; set; }
     public DateTime? ResolvedDate { get; set;}
     [Required(ErrorMessage = "Diagnosis status is required")]
     public DiagnosisStatus Status {get; set;} // active, resolved
