@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using HealthMetrics.Endpoints;
+using Serilog;
+using Serilog.Sinks.PostgreSQL;
 
 //builder setup
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,27 @@ builder.Services.AddOpenApiDocument(config =>
     config.DocumentName = "HealthcareAPI";
     config.Title = "HealthcareAPI v1";
     config.Version = "v1";
+});
+
+builder.Host.UseSerilog((context, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.PostgreSQL(
+            connectionString: "Host=localhost;Database=mydb;Username=user;Password=pass",
+            tableName: "audit_logs",
+            needAutoCreateTable: true,
+            columnOptions: new Dictionary<string, ColumnWriterBase>
+            {
+                { "timestamp", new TimestampColumnWriter(NpgsqlTypes.NpgsqlDbType.TimestampTz) },
+                { "message", new RenderedMessageColumnWriter(NpgsqlTypes.NpgsqlDbType.Text) },
+                { "user_id", new SinglePropertyColumnWriter("UserId", PropertyWriteMethod.ToString, NpgsqlTypes.NpgsqlDbType.Text) },
+                { "ip_address", new SinglePropertyColumnWriter("IpAddress", PropertyWriteMethod.ToString, NpgsqlTypes.NpgsqlDbType.Text) },
+                { "data_id", new SinglePropertyColumnWriter("DataId", PropertyWriteMethod.ToString, NpgsqlTypes.NpgsqlDbType.Text) },
+                { "properties", new LogEventSerializedColumnWriter(NpgsqlTypes.NpgsqlDbType.Jsonb) }
+            });
 });
 //create app
 var app = builder.Build();

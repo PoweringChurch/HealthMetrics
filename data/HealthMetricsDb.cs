@@ -9,6 +9,7 @@ class HealthMetricsDb(DbContextOptions<HealthMetricsDb> options) : DbContext(opt
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // filter out data that has been marked as deleted
         modelBuilder.Entity<Patient>().HasQueryFilter(p => p.DeletedAt == null);
         modelBuilder.Entity<VitalsEntry>().HasQueryFilter(v => v.DeletedAt == null);
         modelBuilder.Entity<Medication>().HasQueryFilter(m => m.DeletedAt == null);
